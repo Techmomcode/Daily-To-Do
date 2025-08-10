@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Günlük Yapılacaklar</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#22c55e;
+      --danger:#ef4444;
+      --ring:#334155;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(160deg,#0b1023,#0f172a 40%,#0b132e);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,sans-serif;color:var(--text)}
+    .wrap{max-width:960px;margin:40px auto;padding:0 16px}
+    .app{background:rgba(17,24,39,.7);backdrop-filter:saturate(140%) blur(6px);border:1px solid #1f2937;border-radius:18px;box-shadow:0 10px 40px rgba(2,6,23,.5)}
+    header{padding:18px 20px 8px;border-bottom:1px solid #1f2937}
+    header h1{margin:0;font-size:22px;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+    header small{display:block;color:var(--muted);margin-top:6px}
+
+    .topbar{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    .topbar select,.topbar input[type="text"], .topbar input[type="time"]{padding:8px 10px;border-radius:10px;border:1px solid var(--ring);background:#0b1222;color:var(--text)}
+    .topbar button{padding:9px 12px;border:1px solid var(--ring);border-radius:10px;background:#0a0f1f;color:var(--text);cursor:pointer}
+    .topbar .ok{background:var(--accent);color:#052e12;border-color:#065f46}
+
+    .form{display:grid;grid-template-columns:1.2fr .6fr auto;gap:10px;padding:16px 20px;border-bottom:1px solid #1f2937}
+    .form input[type="text"]{padding:12px 14px;border-radius:12px;border:1px solid var(--ring);background:#0b1222;color:var(--text)}
+    .form input[type="time"]{padding:11px 12px;border-radius:12px;border:1px solid var(--ring);background:#0b1222;color:var(--text)}
+    .form button{padding:12px 16px;border:0;border-radius:12px;background:var(--accent);color:#052e12;font-weight:700;cursor:pointer}
+    .form button:active{transform:translateY(1px)}
+
+    .controls{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;color:var(--muted);flex-wrap:wrap;gap:8px}
+    .controls .left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .controls button.text{background:transparent;border:1px solid var(--ring);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
+
+    ul{list-style:none;margin:0;padding:8px 12px 16px}
+    li.task{display:grid;grid-template-columns:auto 1fr 90px auto;gap:12px;align-items:center;padding:12px 10px;margin:8px 8px;background:#0b1222;border:1px solid #1f2937;border-radius:14px}
+    .time{font-variant-numeric:tabular-nums;color:#c7d2fe;background:#11153a;padding:6px 10px;border-radius:8px;border:1px solid #1f254f;justify-self:start}
+    .text{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .done .text{opacity:.65;text-decoration:line-through}
+
+    .row-actions{display:flex;gap:8px}
+    .iconbtn{background:#0a0f1f;border:1px solid #1f2937;color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
+    .iconbtn.danger{border-color:#3b0f13;color:#fecaca;background:#1a0b0c}
+
+    .empty{padding:18px 20px;color:var(--muted)}
+
+    footer{padding:14px 20px;color:var(--muted);border-top:1px solid #1f2937;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .badge{border:1px dashed #334155;border-radius:999px;padding:6px 10px}
+
+    dialog{border:1px solid #1f2937;border-radius:16px;background:#0b1222;color:var(--text);padding:16px 16px 10px;max-width:520px}
+    dialog::backdrop{background:rgba(2,6,23,.6)}
+    dialog .row{display:flex;gap:8px;margin:8px 0;align-items:center}
+    dialog input, dialog select{background:#0a0f1f;border:1px solid var(--ring);color:var(--text);padding:8px;border-radius:10px}
+    dialog button{padding:8px 10px;border-radius:10px;border:1px solid var(--ring);background:#0a0f1f;color:var(--text);cursor:pointer}
+    dialog .ok{background:var(--accent);color:#052e12;border-color:#065f46}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="app">
+      <header>
+        <h1>🗓️ <span id="appTitle">Günlük Yapılacaklar</span> <span id="today"></span></h1>
+        <small id="subtitle">Görev ekle, saatini yaz, 10 dk önce bildirim al. Sabahları su içmeyi hatırlat. Günlük moodunu kaydet. Şablon uygula. Günlük motivasyon bildirimi al.</small>
+
+        <div class="topbar">
+          <button id="langToggle">🌐 EN</button>
+          <button id="notifyBtn">🔔 <span data-tr="notify">Bildirimleri Aç</span></button>
+
+          <label style="display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="waterToggle" />
+            <span data-tr="water">Su hatırlat</span>
+            <input type="time" id="waterStart" value="08:00" style="width:90px" />
+            -
+            <input type="time" id="waterEnd" value="12:00" style="width:90px" />
+          </label>
+
+          <label style="display:flex;align-items:center;gap:6px">
+            <span data-tr="mot_time">Motivasyon</span>
+            <input type="time" id="motivationTime" value="09:00" style="width:90px" />
+          </label>
+
+          <select id="moodSelect" title="Günlük mood">
+            <option value="">Mood</option>
+            <option>😄 Harika</option>
+            <option>🙂 İyi</option>
+            <option>😐 Normal</option>
+            <option>😕 Düşük</option>
+            <option>😢 Kötü</option>
+          </select>
+          <input id="moodNote" type="text" placeholder="Mood notu (isteğe bağlı)" />
+          <button class="ok" id="saveMood"><span data-tr="save">Kaydet</span></button>
+        </div>
+      </header>
+
+      <form class="form" id="taskForm">
+        <input id="taskText" type="text" placeholder="Örn: 30 dk spor, mail kontrol, ders çalış…" required />
+        <input id="taskTime" type="time" />
+        <button type="submit">➕ Ekle</button>
+      </form>
+
+      <div class="controls">
+        <div class="left">
+          <button class="text" id="resetDone">Günü Sıfırla</button>
+          <button class="text" id="exportBtn">Dışa Aktar</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none" />
+          <button class="text" id="importBtn">İçe Aktar</button>
+          <button class="text" id="saveTemplate">Şablonu Kaydet</button>
+          <button class="text" id="applyTemplate">Şablonu Uygula</button>
+        </div>
+        <div class="right">
+          <span class="badge">Toplam: <b id="totalCount">0</b> • Tamamlanan: <b id="doneCount">0</b> • Mood: <b id="moodBadge">—</b></span>
+        </div>
+      </div>
+
+      <ul id="list"></ul>
+
+      <div class="empty" id="empty">Henüz görev eklemedin. Üstten bir görev ve saat girip “Ekle”ye bas.</div>
+
+      <footer>
+        <div>⏰ İpucu: Saat yazmazsan görev listede “—:—” olarak görünür. Bildirim için bu sayfayı açık ve izin verilmiş tut.</div>
+        <div>💾 Tüm veriler cihazında (localStorage) saklanır.</div>
+      </footer>
+    </div>
+  </div>
+
+  <dialog id="templateDlg">
+    <h3>🧩 Haftalık Plan Şablonu</h3>
+    <p>Mevcut görevlerini <b>şablon</b> olarak kaydedebilir; her gün tek tıkla uygulayabilirsin.</p>
+    <div class="row"><input id="tplName" placeholder="Şablon adı (örn: Hafta Rutini)" /></div>
+    <div class="row"><button id="dlgSaveTpl" class="ok">Kaydet</button><button id="dlgCloseTpl">Kapat</button></div>
+    <small style="color:var(--muted)">Not: Şablona görevlerin metni ve saatleri kaydedilir.</small>
+  </dialog>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const listEl = $('#list');
+  const textEl = $('#taskText');
+  const timeEl = $('#taskTime');
+  const totalEl = $('#totalCount');
+  const doneEl = $('#doneCount');
+  const emptyEl = $('#empty');
+  const todayEl = $('#today');
+  const moodSel = $('#moodSelect');
+  const moodNote = $('#moodNote');
+  const moodBadge = $('#moodBadge');
+  const notifyBtn = $('#notifyBtn');
+  const waterToggle = $('#waterToggle');
+  const waterStart = $('#waterStart');
+  const waterEnd   = $('#waterEnd');
+  const motivationTimeEl = $('#motivationTime');
+
+  const STORAGE_KEY   = 'dailyTasks_v4';
+  const DATE_KEY      = 'dailyTasks_lastDate_v4';
+  const MOOD_KEY_PREF = 'dailyMood_';
+  const TPL_KEY       = 'dailyTaskTemplates_v1';
+  const SETTINGS_KEY  = 'dailySettings_v3';
+
+  const templateDlg   = $('#templateDlg');
+  const tplNameInput  = $('#tplName');
+
+  const langData = {
+    tr: {
+      title: 'Günlük Yapılacaklar',
+      subtitle: 'Görev ekle, saatini yaz, 10 dk önce bildirim al. Sabahları su içmeyi hatırlat. Günlük moodunu kaydet. Şablon uygula. Günlük motivasyon bildirimi al.',
+      notify: 'Bildirimleri Aç',
+      water: 'Su hatırlat',
+      save: 'Kaydet',
+      mot_time: 'Motivasyon'
+    },
+    en: {
+      title: 'Daily To-Do',
+      subtitle: 'Add tasks, set time, get notified 10 min before. Morning water reminder. Save mood. Apply template. Daily motivation notification.',
+      notify: 'Enable Notifications',
+      water: 'Water reminder',
+      save: 'Save',
+      mot_time: 'Motivation'
+    }
+  };
+
+  let currentLang = (localStorage.getItem('lang')||'tr');
+  $('#langToggle').addEventListener('click', ()=>{
+    currentLang = currentLang==='tr' ? 'en' : 'tr';
+    localStorage.setItem('lang', currentLang);
+    applyLang();
+  });
+
+  function applyLang(){
+    const dict = langData[currentLang];
+    $('#appTitle').textContent = dict.title;
+    $('#subtitle').textContent = dict.subtitle;
+    document.querySelectorAll('[data-tr]').forEach(el=>{
+      el.textContent = dict[el.getAttribute('data-tr')];
+    });
+    $('#langToggle').textContent = currentLang==='tr' ? '🌐 EN' : '🌐 TR';
+    textEl.placeholder = currentLang==='tr' ? 'Örn: 30 dk spor, mail kontrol, ders çalış…' : 'e.g., 30m workout, check mail, study…';
+    moodNote.placeholder = currentLang==='tr' ? 'Mood notu (isteğe bağlı)' : 'Mood note (optional)';
+    $('#resetDone').textContent = currentLang==='tr' ? 'Günü Sıfırla' : 'Reset Day';
+    $('#exportBtn').textContent = currentLang==='tr' ? 'Dışa Aktar' : 'Export';
+    $('#importBtn').textContent = currentLang==='tr' ? 'İçe Aktar' : 'Import';
+    $('#saveTemplate').textContent = currentLang==='tr' ? 'Şablonu Kaydet' : 'Save Template';
+    $('#applyTemplate').textContent = currentLang==='tr' ? 'Şablonu Uygula' : 'Apply Template';
+    $('#empty').textContent = currentLang==='tr' ? 'Henüz görev eklemedin. Üstten bir görev ve saat girip “Ekle”ye bas.' : 'No tasks yet. Add one above and hit “Add”.';
+    $('#dlgSaveTpl').textContent = currentLang==='tr' ? 'Kaydet' : 'Save';
+    $('#dlgCloseTpl').textContent = currentLang==='tr' ? 'Kapat' : 'Close';
+    tplNameInput.placeholder = currentLang==='tr' ? 'Şablon adı (örn: Hafta Rutini)' : 'Template name (e.g., Week Routine)';
+  }
+  applyLang();
+
+  // === STATE ===
+  let tasks = loadTasks();
+  let timers = new Map(); // id -> timeoutId
+  let settings = loadSettings();
+
+  // === INIT ===
+  todayEl.textContent = '• ' + new Date().toLocaleDateString(currentLang==='tr'?'tr-TR':'en-US',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  dailyAutoReset();
+  applySettingsUI();
+  render();
+  rescheduleAllReminders();
+  loadMoodForToday();
+
+  // === EVENTS ===
+  $('#taskForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const text = (textEl.value||'').trim();
+    const time = (timeEl.value||'').trim();
+    if(!text) return;
+    const t = { id: crypto.randomUUID(), text, time, done:false, createdAt:Date.now() };
+    tasks.push(t);
+    saveTasks();
+    textEl.value=''; timeEl.value='';
+    render();
+    scheduleReminderForTask(t);
+  });
+
+  $('#resetDone').addEventListener('click', ()=>{
+    tasks = tasks.map(t=>({...t, done:false}));
+    saveTasks(true);
+    render();
+  });
+
+  $('#exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify({tasks, exportedAt:new Date().toISOString()}, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'gunluk-gorevler.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
+  $('#importFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const text = await file.text();
+    try{
+      const data = JSON.parse(text);
+      if(Array.isArray(data.tasks)){
+        tasks = data.tasks.map(sanitizeTask);
+        saveTasks();
+        render();
+        rescheduleAllReminders();
+      } else { alert(currentLang==='tr'?'Geçersiz dosya':'Invalid file'); }
+    }catch(err){ alert((currentLang==='tr'?'Okunamadı: ':'Failed to read: ')+ err.message); }
+  });
+
+  $('#saveTemplate').addEventListener('click', ()=>{
+    tplNameInput.value = '';
+    templateDlg.showModal();
+  });
+  $('#dlgSaveTpl').addEventListener('click', ()=>{
+    const name = tplNameInput.value.trim() || (currentLang==='tr'?'Hafta Rutini':'Week Routine');
+    const templates = loadTemplates();
+    templates[name] = tasks.map(t=>({text:t.text, time:t.time}));
+    localStorage.setItem(TPL_KEY, JSON.stringify(templates));
+    templateDlg.close();
+    alert(currentLang==='tr'?'Şablon kaydedildi. "Şablonu Uygula" ile kullanabilirsin.':'Template saved. Use "Apply Template".');
+  });
+  $('#dlgCloseTpl').addEventListener('click', ()=> templateDlg.close());
+
+  $('#applyTemplate').addEventListener('click', async ()=>{
+    const templates = loadTemplates();
+    const names = Object.keys(templates);
+    if(names.length===0){ alert(currentLang==='tr'?'Önce bir şablon kaydet.':'Save a template first.'); return; }
+    const pick = prompt((currentLang==='tr'?'Hangi şablon?\n':'Which template?\n') + names.map((n,i)=>`${i+1}. ${n}`).join('\n'));
+    const idx = Number(pick)-1;
+    if(Number.isNaN(idx) || idx<0 || idx>=names.length) return;
+    const chosen = templates[names[idx]];
+    chosen.forEach(item=>{
+      const t = { id: crypto.randomUUID(), text: String(item.text||'Görev'), time: String(item.time||''), done:false, createdAt:Date.now() };
+      tasks.push(t);
+      scheduleReminderForTask(t);
+    });
+    saveTasks();
+    render();
+  });
+
+  // Notifications
+  notifyBtn.addEventListener('click', async ()=>{
+    if(!('Notification' in window)){
+      alert(currentLang==='tr'?'Tarayıcın bildirim desteklemiyor.':'Your browser does not support notifications.');
+      return;
+    }
+    try{
+      const perm = await Notification.requestPermission();
+      if(perm==='granted'){
+        new Notification(currentLang==='tr'?'Bildirimler Açıldı':'Notifications Enabled', {body: currentLang==='tr'?'Görevlerin için hatırlatmalar hazır!':'Reminders are ready for your tasks!'});
+      } else if(perm==='denied'){
+        alert(currentLang==='tr'?'Bildirim izni reddedildi. Tarayıcı ayarlarından açabilirsin.':'Permission denied. Enable it from your browser settings.');
+      }
+    }catch(e){ console.error(e); }
+  });
+
+  // Water reminder toggle/time change
+  [waterToggle, waterStart, waterEnd, motivationTimeEl].forEach(el=>{
+    el.addEventListener('change', ()=>{
+      settings.water = waterToggle.checked;
+      settings.waterStart = waterStart.value;
+      settings.waterEnd = waterEnd.value;
+      settings.motivationTime = motivationTimeEl.value;
+      saveSettings();
+    });
+  });
+
+  // Mood save
+  $('#saveMood').addEventListener('click', ()=>{
+    const key = MOOD_KEY_PREF + isoDate();
+    const mood = (moodSel.value||'').trim();
+    const note = (moodNote.value||'').trim();
+    localStorage.setItem(key, JSON.stringify({mood, note, savedAt: Date.now()}));
+    updateMoodBadge(mood, note);
+  });
+
+  // Periodic timers
+  setInterval(tick, 60*1000); // every minute
+
+  // === HELPERS ===
+  function sanitizeTask(t){
+    return {
+      id: String(t.id||crypto.randomUUID()),
+      text: String(t.text||'Görev'),
+      time: String(t.time||''),
+      done: Boolean(t.done),
+      createdAt: Number(t.createdAt||Date.now())
+    };
+  }
+  function loadTasks(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return [];
+      return arr.map(sanitizeTask);
+    }catch{ return []; }
+  }
+  function saveTasks(updateDate=false){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    if(updateDate) localStorage.setItem(DATE_KEY, isoDate());
+    updateCounts();
+  }
+  function loadTemplates(){
+    try{ return JSON.parse(localStorage.getItem(TPL_KEY))||{}; }catch{ return {}; }
+  }
+  function loadSettings(){
+    try{
+      const def = {water:false, waterStart:'08:00', waterEnd:'12:00', motivationTime:'09:00'};
+      return Object.assign(def, JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'));
+    }catch{ return {water:false, waterStart:'08:00', waterEnd:'12:00', motivationTime:'09:00'}; }
+  }
+  function saveSettings(){
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    applySettingsUI();
+  }
+  function applySettingsUI(){
+    waterToggle.checked = !!settings.water;
+    waterStart.value = settings.waterStart || '08:00';
+    waterEnd.value = settings.waterEnd || '12:00';
+    motivationTimeEl.value = settings.motivationTime || '09:00';
+  }
+
+  function isoDate(){
+    const d=new Date();
+    return d.toISOString().slice(0,10);
+  }
+
+  function dailyAutoReset(){
+    const last = localStorage.getItem(DATE_KEY);
+    const today = isoDate();
+    if(last !== today){
+      tasks = tasks.map(t=>({...t, done:false}));
+      localStorage.setItem(DATE_KEY, today);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+    // midnight check
+    setInterval(()=>{
+      const now = isoDate();
+      if(localStorage.getItem(DATE_KEY) !== now){
+        tasks = tasks.map(t=>({...t, done:false}));
+        localStorage.setItem(DATE_KEY, now);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        render();
+        rescheduleAllReminders();
+        loadMoodForToday();
+      }
+    }, 60*1000);
+  }
+
+  function render(){
+    // sort by time then createdAt
+    const sorted = [...tasks].sort((a,b)=>{
+      const aa = a.time || '99:99';
+      const bb = b.time || '99:99';
+      if(aa!==bb) return aa.localeCompare(bb);
+      return a.createdAt - b.createdAt;
+    });
+
+    listEl.innerHTML = '';
+    emptyEl.style.display = sorted.length===0 ? 'block' : 'none';
+
+    sorted.forEach(t=>{
+      const li = document.createElement('li');
+      li.className = 'task' + (t.done?' done':'');
+
+      const cb = document.createElement('input');
+      cb.type='checkbox'; cb.checked = t.done;
+      cb.addEventListener('change', ()=>{ t.done = cb.checked; saveTasks(); li.classList.toggle('done', t.done); updateCounts();});
+
+      const text = document.createElement('div');
+      text.className = 'text';
+      text.textContent = t.text;
+
+      const time = document.createElement('div');
+      time.className = 'time';
+      time.textContent = t.time ? t.time : '—:—';
+
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+
+      const editBtn = document.createElement('button');
+      editBtn.className='iconbtn'; editBtn.title='Düzenle'; editBtn.textContent='✏️';
+      editBtn.addEventListener('click', ()=> editTask(t));
+
+      const delBtn = document.createElement('button');
+      delBtn.className='iconbtn danger'; delBtn.title='Sil'; delBtn.textContent='🗑️';
+      delBtn.addEventListener('click', ()=> deleteTask(t.id));
+
+      actions.append(editBtn, delBtn);
+      li.append(cb, text, time, actions);
+      listEl.appendChild(li);
+    });
+
+    updateCounts();
+  }
+
+  function updateCounts(){
+    totalEl.textContent = String(tasks.length);
+    doneEl.textContent = String(tasks.filter(t=>t.done).length);
+  }
+
+  function deleteTask(id){
+    if(!confirm(currentLang==='tr'?'Görevi silmek istiyor musun?':'Delete this task?')) return;
+    cancelReminder(id);
+    tasks = tasks.filter(t=>t.id!==id);
+    saveTasks();
+    render();
+  }
+
+  function editTask(task){
+    const newText = prompt(currentLang==='tr'?'Görev metni:':'Task text:', task.text);
+    if(newText===null) return; // cancel
+    const newTime = prompt(currentLang==='tr'?'Saat (SS:dd) — boş bırakabilirsin:':'Time (HH:mm) — optional:', task.time);
+    if(newTime===null) return;
+    task.text = (newText||'').trim()||task.text;
+    task.time = (newTime||'').trim();
+    saveTasks();
+    render();
+    // reschedule
+    cancelReminder(task.id);
+    scheduleReminderForTask(task);
+  }
+
+  // === NOTIFICATIONS ===
+  function canNotify(){
+    return 'Notification' in window && Notification.permission==='granted';
+  }
+  function notify(title, body){
+    if(!canNotify()) return;
+    try{ new Notification(title, { body }); }catch(e){ console.warn('Notification failed', e); }
+  }
+
+  function timeToDate(timeStr){
+    const [hh,mm] = (timeStr||'').split(':').map(n=>parseInt(n,10));
+    const d = new Date();
+    if(Number.isInteger(hh) && Number.isInteger(mm)){
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    }
+    return null;
+  }
+
+  // 10 min before reminder
+  function scheduleReminderForTask(task){
+    if(!task.time) return; // no time, no reminder
+    const d = timeToDate(task.time);
+    if(!d) return;
+    const remindAt = new Date(d.getTime() - 10*60*1000);
+    const now = Date.now();
+    const ms = remindAt.getTime() - now;
+    if(ms <= 0) return; // already passed
+    const to = setTimeout(()=>{
+      notify('⏰ ' + (currentLang==='tr'?'10 dk kaldı':'10 min left'), `${task.time} • ${task.text}`);
+      timers.delete(task.id);
+    }, ms);
+    timers.set(task.id, to);
+  }
+  function cancelReminder(id){
+    const to = timers.get(id);
+    if(to){ clearTimeout(to); timers.delete(id); }
+  }
+  function rescheduleAllReminders(){
+    timers.forEach(to=>clearTimeout(to));
+    timers.clear();
+    tasks.forEach(scheduleReminderForTask);
+  }
+
+  // === WATER & MOTIVATION TICKS ===
+  function parseMins(hhmm){
+    const [h,m] = (hhmm||'').split(':').map(Number);
+    return h*60 + m;
+  }
+
+  function getDayOfYear(d){
+    const start = new Date(d.getFullYear(),0,0);
+    const diff = d - start;
+    const oneDay = 1000*60*60*24;
+    return Math.floor(diff/oneDay);
+  }
+
+  // Procedurally generate 365 positive prompts (TR/EN) so we don't need to hardcode each one
+  function dailyMotivationText(date, lang){
+    const day = getDayOfYear(date);
+    const actsTR = [
+      '1 dk derin nefes al', '5 dk esneme yap', '2 dk omuzlarını gevşet', 'Su iç', 'Kısa yürüyüş yap',
+      '1 küçük hedef yaz', '3 iyi şey not et', 'Birine teşekkür et', 'Kendine nazik ol', 'Telefonu 10 dk bırak',
+      'Pencereyi aç, derin nefes', 'Gülümse', 'Sırtını dikleştir', 'Sevdiğin şarkıyı aç', 'Kısa meditasyon',
+      'Gün ışığına çık', 'Hafif atıştırmalık hazırla', 'Duruşunu kontrol et', 'Rutinine sadık kal', 'Kendine sarıl',
+      'Hızlı toparlan', 'Masayı düzenle', 'Hedefini görselleştir', 'İç konuşmanı yumuşat', 'Kısa mola ver',
+      'İlerlemeyi kutla', 'Kendi hızın yeter', 'Bugün tek şey seç', 'Mükemmel olma, yeterli ol', 'Kendine iyi davran'
+    ];
+    const actsEN = [
+      'Take 1 min deep breath', 'Stretch for 5 min', 'Relax your shoulders', 'Drink water', 'Take a short walk',
+      'Write one small goal', 'Note 3 good things', 'Thank someone', 'Be kind to yourself', 'Put phone away for 10 min',
+      'Open a window, breathe', 'Smile', 'Straighten your back', 'Play a favorite song', 'Quick meditation',
+      'Get some daylight', 'Prep a light snack', 'Check your posture', 'Stick to your routine', 'Give yourself a hug',
+      'Reset quickly', 'Tidy your desk', 'Visualize your goal', 'Soften self-talk', 'Take a short break',
+      'Celebrate progress', 'Your pace is enough', 'Pick one thing today', 'Don’t be perfect, be done', 'Treat yourself gently'
+    ];
+    const quotesTR = [
+      'Küçük adımlar büyük değişimlere yol açar.',
+      'Enerjin nereye giderse sonuç orada doğar.',
+      'Bugün, geri kalan hayatının ilk günü.',
+      'Zor günler geçer, sen kalırsın.',
+      'Her gün yeniden başlama şansın var.',
+      'Odaklan, nefes al, devam et.',
+      'Kendine inandığında yarı yol geride kalır.',
+      'Az ama düzenli ilerle.',
+      'Bugününü değerli kıl.',
+      'Sen yeterlisin.'
+    ];
+    const quotesEN = [
+      'Small steps create big change.',
+      'Where energy goes, results grow.',
+      'Today is the first day of the rest of your life.',
+      'Hard days pass—you remain.',
+      'You can restart any day.',
+      'Focus, breathe, continue.',
+      'Believe in yourself and you are halfway there.',
+      'Less but consistent wins.',
+      'Make today count.',
+      'You are enough.'
+    ];
+    const listA = lang==='tr'?actsTR:actsEN;
+    const listQ = lang==='tr'?quotesTR:quotesEN;
+    const a = listA[day % listA.length];
+    const b = listQ[day % listQ.length];
+    return `${a} — ${b}`;
+  }
+
+  function tick(){
+    const now = new Date();
+    // Hourly water
+    if(settings.water){
+      const startMins = parseMins(settings.waterStart||'08:00');
+      const endMins   = parseMins(settings.waterEnd||'12:00');
+      const nowMins   = now.getHours()*60 + now.getMinutes();
+      if(now.getMinutes()===0 && nowMins>=startMins && nowMins<=endMins){
+        notify('💧', currentLang==='tr'? 'Bir bardak su iç!' : 'Drink a glass of water!');
+      }
+    }
+    // Daily motivation at set time
+    const motMins = parseMins(settings.motivationTime||'09:00');
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    if(nowMins === motMins){
+      const msg = dailyMotivationText(now, currentLang==='tr'?'tr':'en');
+      notify('✨', msg);
+    }
+  }
+
+  function loadMoodForToday(){
+    const key = MOOD_KEY_PREF + isoDate();
+    try{
+      const obj = JSON.parse(localStorage.getItem(key)||'null');
+      if(obj){
+        moodSel.value = obj.mood || '';
+        moodNote.value = obj.note || '';
+        updateMoodBadge(obj.mood, obj.note);
+      } else {
+        moodSel.value = ''; moodNote.value=''; moodBadge.textContent='—';
+      }
+    }catch{ /* noop */ }
+  }
+  function updateMoodBadge(mood, note){
+    moodBadge.textContent = mood ? (note? `${mood} — ${note}` : mood) : '—';
+  }
+
+})();
+</script>
+</body>
+</html>
